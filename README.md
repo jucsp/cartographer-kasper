@@ -7,7 +7,7 @@ Método 1: Instalación mediante el Lanzador de Turtle WoW
     Abre el lanzador oficial de Turtle WoW
     Ve a la sección de Addons
     Haz clic en "Agregar Addon"
-    Pega la URL de este repositorio: https://github.com/jucsp/cartographer-kasper
+    Pega la URL de este repositorio: https://github.com/jucsp/cartographer-kasper.git
     Haz clic en "Instalar"
 
 Método 2: Instalación manual
