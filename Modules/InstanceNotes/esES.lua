@@ -1,6 +1,7 @@
 local L = AceLibrary("AceLocale-2.2"):new("Cartographer_InstanceNotes")
 
 -- Spanish translations by Kasper
+
 L:RegisterTranslations("esES", function() return {
     ["Reset"] = "Reiniciar",
     ["Reset Cartographer Instance Notes to default"] = "Reiniciar Cartographer Instance Notes a los valores por defecto",
