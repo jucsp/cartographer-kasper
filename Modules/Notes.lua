@@ -1,3 +1,5 @@
+--TODO: En la versión en Español, falta corregir los botones para enviar notas a la hermandad y mediante susurros.
+
 local revision = tonumber(string.sub("$Revision: 18702 $", 12, -3))
 if revision > Cartographer.revision then
 	Cartographer.version = "r" .. revision
