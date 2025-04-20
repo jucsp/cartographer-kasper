@@ -1253,7 +1253,13 @@ function Cartographer_Notes:ShowEditDialog(zone, x, y)
 	local x, y = getXY(id)
 	frame.xEditBox:SetText(string.format("%.1f", x*100))
 	frame.yEditBox:SetText(string.format("%.1f", y*100))
-	frame.zone:SetText(BZ[zone])
+
+	if BZ:GetReverseTranslation(zone) ~= zone then
+        frame.zone:SetText(zone) -- Ya está traducido
+    else
+        frame.zone:SetText(BZ[zone]) -- Traduce la zona
+    end
+
 	if type(data) == "table" then
 		frame.title:SetText(data.title or getIconTitle(data.icon))
 		frame.title.resetColor(data.titleR or 1, data.titleG or 1, data.titleB or 1)
@@ -1566,185 +1572,193 @@ end
 
 local cache = {}
 function Cartographer_Notes:SetNote(zone, x, y, icon, creator, k1, v1, k2, v2, k3, v3, k4, v4, k5, v5, k6, v6, k7, v7, k8, v8, k9, v9, k10, v10, k11, v11, k12, v12, k13, v13, k14, v14, k15, v15, k16, v16, k17, v17, k18, v18, k19, v19, k20, v20)
-	AceLibrary.argCheck(self, zone, 2, "string")
-	AceLibrary.argCheck(self, x, 3, "number")
-	AceLibrary.argCheck(self, y, 4, "number")
-	AceLibrary.argCheck(self, icon, 5, "string")
-	AceLibrary.argCheck(self, creator, 6, "string")
-	if not BZ:HasTranslation(zone) then
-		if BZ:HasReverseTranslation(zone) then
-			zone = BZ:GetReverseTranslation(zone)
-		else
-			error(string.format("Trying to set a note with an unknown zone: %q", zone), 2)
-		end
-	end
-	if x < 0 or x > 1 then
-		error(string.format("Argument #3 is expected to be [0, 1], got %s", x), 2)
-	end
-	if y < 0 or y > 1 then
-		error(string.format("Argument #4 is expected to be [0, 1], got %s", y), 2)
-	end
-	
-	local usingDB = self.externalDBs[creator] and creator or nil
-	
-	local id = getID(x, y)
-	
-	if usingDB and not self.externalDBs[creator][zone] then
-		self.externalDBs[creator][zone] = {}
-	end
-	local zoneData = usingDB and self.externalDBs[creator][zone] or self.db.account.pois[zone]
-	local oldData = rawget(zoneData, id)
-	if type(oldData) == "table" then
-		local tmp = oldData
-		oldData = cache
-		for k,v in pairs(tmp) do
-			oldData[k] = v
-		end
-	end
-	if not k1 and usingDB then
-		zoneData[id] = icon
+    AceLibrary.argCheck(self, zone, 2, "string")
+    AceLibrary.argCheck(self, x, 3, "number")
+    AceLibrary.argCheck(self, y, 4, "number")
+    AceLibrary.argCheck(self, icon, 5, "string")
+    AceLibrary.argCheck(self, creator, 6, "string")
+
+    -- Traduce el nombre de la zona utilizando Babble-Zone
+	if  BZ:GetReverseTranslation(zone) ~= zone then
+		-- Si el nombre ya está traducido, no hacemos nada
+	elseif BZ:HasTranslation(zone) then
+		-- Si hay una traducción directa, la aplicamos
+		zone = BZ[zone]
+	elseif BZ:HasReverseTranslation(zone) then
+		-- Si no hay traducción directa pero hay una inversa, la aplicamos
+		zone = BZ:GetReverseTranslation(zone)
 	else
-		local t
-		if not zoneData[id] then
-			zoneData[id] = {}
-		end
-		t = zoneData[id]
-		for k,v in pairs(t) do
-			t[k] = nil
-		end
-		if type(k1) ~= "table" then
-			if k1 then t[k1] = v1
-			if k2 then t[k2] = v2
-			if k3 then t[k3] = v3
-			if k4 then t[k4] = v4
-			if k5 then t[k5] = v5
-			if k6 then t[k6] = v6
-			if k7 then t[k7] = v7
-			if k8 then t[k8] = v8
-			if k9 then t[k9] = v9
-			if k10 then t[k10] = v10
-			if k11 then t[k11] = v11
-			if k12 then t[k12] = v12
-			if k13 then t[k13] = v13
-			if k14 then t[k14] = v14
-			if k15 then t[k15] = v15
-			if k16 then t[k16] = v16
-			if k17 then t[k17] = v17
-			if k18 then t[k18] = v18
-			if k19 then t[k19] = v19
-			if k20 then t[k20] = v20
-			end end end end end end end end end end end end end end end end end end end end
-		else
-			for k,v in pairs(k1) do
-				t[k] = v
-			end
-		end
-		t.icon = icon
-		if not usingDB then
-			t.creator = creator
-		end
-		local oldId = t.oldId
-		t.oldId = nil
-		if oldId and oldId ~= id then
-			local oldicon
-			if rawget(zoneData, oldId) then
-				oldicon = zoneData[oldId]
-				zoneData[oldId] = nil
-				if type(oldicon) == "table" then
-					oldicon = oldicon.icon
-				end
-			end
-			if zone == Cartographer:GetCurrentEnglishZoneName() then
-				pois[id] = pois[oldId]
-				pois[oldId] = nil
-			end
-			if oldicon then
-				local oldx, oldy = getXY(oldId)
-				self:TriggerEvent("CartographerNotes_NoteDeleted", zone, oldx, oldy, oldicon, usingDB)
-			end
-		end
-		if t.title == getIconTitle(icon) then
-			t.title = nil
-		end
-		if t.titleR == 1 then
-			t.titleR = nil
-		end
-		if t.titleG == 1 then
-			t.titleG = nil
-		end
-		if t.titleB == 1 then
-			t.titleB = nil
-		end
-		if t.info == "" then
-			t.info = nil
-		end
-		if t.infoR == 1 then
-			t.infoR = nil
-		end
-		if t.infoG == 1 then
-			t.infoG = nil
-		end
-		if t.infoB == 1 then
-			t.infoB = nil
-		end
-		if t.info2 == "" then
-			t.info2 = nil
-		end
-		if t.info2R == 1 then
-			t.info2R = nil
-		end
-		if t.info2G == 1 then
-			t.info2G = nil
-		end
-		if t.info2B == 1 then
-			t.info2B = nil
-		end
-		if usingDB then
-			t.creator = nil
-			t.manual = nil
-		end
-		if creator == "" then
-			t.creator = nil
-		end
-		if next(t) == 'icon' and next(t, 'icon') == nil then
-			zoneData[id] = t.icon
-		end
+		-- Si no hay traducción ni inversa, lanzamos un error
+		error(string.format("Trying to set a note with an unknown zone: %q", zone), 2)
 	end
-	local different = false
-	local newData = zoneData[id]
-	if type(oldData) ~= type(newData) then
-		different = true
-	elseif type(oldData) ~= "table" then
-		different = oldData ~= newData
-	else
-		for k,v in pairs(oldData) do
-			if newData[k] ~= v then
-				different = true
-				break
-			end
-		end
-		if not different then
-			for k,v in pairs(newData) do
-				if oldData[k] ~= v then
-					different = true
-					break
-				end
-			end
-		end
-	end
-	for k,v in pairs(cache) do
-		cache[k] = nil
-	end
-	if not different then
-		return false
-	end
-	self:TriggerEvent("CartographerNotes_NoteSet", zone, x, y, icon, creator)
-	if zone ~= Cartographer:GetCurrentEnglishZoneName() then
-		return true
-	end
-	self:ShowNote(zone, id, creator)
-	return true
+
+    if x < 0 or x > 1 then
+        error(string.format("Argument #3 is expected to be [0, 1], got %s", x), 2)
+    end
+    if y < 0 or y > 1 then
+        error(string.format("Argument #4 is expected to be [0, 1], got %s", y), 2)
+    end
+
+    local usingDB = self.externalDBs[creator] and creator or nil
+    local id = getID(x, y)
+
+    if usingDB and not self.externalDBs[creator][zone] then
+        self.externalDBs[creator][zone] = {}
+    end
+    local zoneData = usingDB and self.externalDBs[creator][zone] or self.db.account.pois[zone]
+    local oldData = rawget(zoneData, id)
+    if type(oldData) == "table" then
+        local tmp = oldData
+        oldData = cache
+        for k, v in pairs(tmp) do
+            oldData[k] = v
+        end
+    end
+    if not k1 and usingDB then
+        zoneData[id] = icon
+    else
+        local t
+        if not zoneData[id] then
+            zoneData[id] = {}
+        end
+        t = zoneData[id]
+        for k, v in pairs(t) do
+            t[k] = nil
+        end
+        if type(k1) ~= "table" then
+            if k1 then t[k1] = v1
+            if k2 then t[k2] = v2
+            if k3 then t[k3] = v3
+            if k4 then t[k4] = v4
+            if k5 then t[k5] = v5
+            if k6 then t[k6] = v6
+            if k7 then t[k7] = v7
+            if k8 then t[k8] = v8
+            if k9 then t[k9] = v9
+            if k10 then t[k10] = v10
+            if k11 then t[k11] = v11
+            if k12 then t[k12] = v12
+            if k13 then t[k13] = v13
+            if k14 then t[k14] = v14
+            if k15 then t[k15] = v15
+            if k16 then t[k16] = v16
+            if k17 then t[k17] = v17
+            if k18 then t[k18] = v18
+            if k19 then t[k19] = v19
+            if k20 then t[k20] = v20
+            end end end end end end end end end end end end end end end end end end end end
+        else
+            for k, v in pairs(k1) do
+                t[k] = v
+            end
+        end
+        t.icon = icon
+        if not usingDB then
+            t.creator = creator
+        end
+        local oldId = t.oldId
+        t.oldId = nil
+        if oldId and oldId ~= id then
+            local oldicon
+            if rawget(zoneData, oldId) then
+                oldicon = zoneData[oldId]
+                zoneData[oldId] = nil
+                if type(oldicon) == "table" then
+                    oldicon = oldicon.icon
+                end
+            end
+            if zone == Cartographer:GetCurrentEnglishZoneName() then
+                pois[id] = pois[oldId]
+                pois[oldId] = nil
+            end
+            if oldicon then
+                local oldx, oldy = getXY(oldId)
+                self:TriggerEvent("CartographerNotes_NoteDeleted", zone, oldx, oldy, oldicon, usingDB)
+            end
+        end
+        if t.title == getIconTitle(icon) then
+            t.title = nil
+        end
+        if t.titleR == 1 then
+            t.titleR = nil
+        end
+        if t.titleG == 1 then
+            t.titleG = nil
+        end
+        if t.titleB == 1 then
+            t.titleB = nil
+        end
+        if t.info == "" then
+            t.info = nil
+        end
+        if t.infoR == 1 then
+            t.infoR = nil
+        end
+        if t.infoG == 1 then
+            t.infoG = nil
+        end
+        if t.infoB == 1 then
+            t.infoB = nil
+        end
+        if t.info2 == "" then
+            t.info2 = nil
+        end
+        if t.info2R == 1 then
+            t.info2R = nil
+        end
+        if t.info2G == 1 then
+            t.info2G = nil
+        end
+        if t.info2B == 1 then
+            t.info2B = nil
+        end
+        if usingDB then
+            t.creator = nil
+            t.manual = nil
+        end
+        if creator == "" then
+            t.creator = nil
+        end
+        if next(t) == 'icon' and next(t, 'icon') == nil then
+            zoneData[id] = t.icon
+        end
+    end
+    local different = false
+    local newData = zoneData[id]
+    if type(oldData) ~= type(newData) then
+        different = true
+    elseif type(oldData) ~= "table" then
+        different = oldData ~= newData
+    else
+        for k, v in pairs(oldData) do
+            if newData[k] ~= v then
+                different = true
+                break
+            end
+        end
+        if not different then
+            for k, v in pairs(newData) do
+                if oldData[k] ~= v then
+                    different = true
+                    break
+                end
+            end
+        end
+    end
+    for k, v in pairs(cache) do
+        cache[k] = nil
+    end
+    if not different then
+        return false
+    end
+    self:TriggerEvent("CartographerNotes_NoteSet", zone, x, y, icon, creator)
+    if zone ~= Cartographer:GetCurrentEnglishZoneName() then
+        return true
+    end
+    self:ShowNote(zone, id, creator)
+    return true
 end
+
 local d = tonumber(date("%Y%m%d"))
 if d < 20061204 then
 	Cartographer_Notes.SetCustomNote = Cartographer_Notes.SetNote
@@ -1789,13 +1803,17 @@ function Cartographer_Notes:DeleteNote(zone, x, y)
 	AceLibrary.argCheck(self, zone, 2, "string")
 	AceLibrary.argCheck(self, x, 3, "number")
 	AceLibrary.argCheck(self, y, 4, "nil", "number")
-	if not BZ:HasTranslation(zone) then
-		if BZ:HasReverseTranslation(zone) then
-			zone = BZ:GetReverseTranslation(zone)
-		else
-			error(string.format("Trying to destroy a note with an unknown zone: %q", zone), 2)
-		end
-	end
+
+	if BZ:GetReverseTranslation(zone) ~= zone then
+        -- Ya está traducido, no hacemos nada
+    elseif not BZ:HasTranslation(zone) then
+        if BZ:HasReverseTranslation(zone) then
+            zone = BZ:GetReverseTranslation(zone)
+        else
+            error(string.format("Trying to destroy a note with an unknown zone: %q", zone), 2)
+        end
+    end
+
 	if y then
 		if x < 0 or x > 1 then
 			error(string.format("Argument #3 is expected to be [0, 1], got %s", x), 2)
